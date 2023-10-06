@@ -8,8 +8,8 @@ def getWattageRange():
     result = subprocess.run(
         getWattageRange, capture_output=True, encoding="utf-8"
     ).stdout
-    minPattern = "Min Power Limit\s+:\s+(\d+)"
-    maxPattern = "Max Power Limit\s+:\s+(\d+)"
+    minPattern = r"Min Power Limit\s+:\s+(\d+)"
+    maxPattern = r"Max Power Limit\s+:\s+(\d+)"
     min = int(re.search(minPattern, result).group(1))
     max = int(re.search(maxPattern, result).group(1))
     return [min, max]
@@ -17,6 +17,9 @@ def getWattageRange():
 
 wattageRange = getWattageRange()
 fanRange = [30, 100]
+
+min = "2100"
+max = "2100"
 
 fanCurve = [[40, fanRange[0]], [50, 50], [60, 70], [65, fanRange[1]]]
 wattageCurve = [
@@ -38,8 +41,13 @@ def resetWattage():
     subprocess.run(resetWattage, capture_output=True)
 
 
+def resetMinClock():
+    resetMinClock = ["sudo", "nvidia-smi", "-rgc"]
+    subprocess.run(resetMinClock, capture_output=True)
+
+
 def getTemperature():
-    pattern = "GPU Current Temp\s+:\s+(\d+)"
+    pattern = r"GPU Current Temp\s+:\s+(\d+)"
     getTemperature = ["sudo", "nvidia-smi", "-q", "-d", "TEMPERATURE"]
     result = subprocess.run(
         getTemperature, capture_output=True, encoding="utf-8"
@@ -48,14 +56,14 @@ def getTemperature():
 
 
 def getFanSpeed():
-    pattern = "Fan Speed\s+:\s+(\d+)"
+    pattern = r"Fan Speed\s+:\s+(\d+)"
     getFanTarget = ["sudo", "nvidia-smi", "-q"]
     result = subprocess.run(getFanTarget, capture_output=True, encoding="utf-8").stdout
     return int(re.search(pattern, result).group(1))
 
 
 def getMaxWattage():
-    pattern = "Requested Power Limit\s+:\s+(\d+)"
+    pattern = r"Requested Power Limit\s+:\s+(\d+)"
     getMaxWattage = ["sudo", "nvidia-smi", "-q", "-d", "POWER"]
     result = subprocess.run(getMaxWattage, capture_output=True, encoding="utf-8").stdout
     return int(re.search(pattern, result).group(1))
@@ -75,6 +83,11 @@ def setWattage(wattage):
     setMaxWattage = ["sudo", "nvidia-smi", "-pl", str(wattage)]
     subprocess.run(setMaxWattage, capture_output=True, encoding="utf-8").stdout
     return True
+
+
+def setMinMaxClock():
+    setMinMaxClock = ["sudo", "nvidia-smi", "-lgc", "2100, 2100"]
+    subprocess.run(setMinMaxClock, capture_output=True, encoding="utf-8").stdout
 
 
 def calculateFanSpeed(currentTemperature, fanCurve):
@@ -113,6 +126,7 @@ def calculateWattage(currentTemperature, wattageCurve):
 
 
 try:
+    setMinMaxClock()
     while True:
         currentTemperature = getTemperature()
         calculateFanSpeed(currentTemperature, fanCurve)
@@ -124,3 +138,4 @@ try:
 finally:
     resetFan()
     resetWattage()
+    resetMinClock()
